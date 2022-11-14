@@ -3,10 +3,12 @@ import dotenv from 'dotenv';
 import { MongoClient } from 'mongodb';
 import Joi from 'joi';
 import dayjs from 'dayjs';
+import cors from 'cors';
 
 const app = express();
 
 app.use(express.json());
+app.use(cors());
 dotenv.config();
 
 const client = new MongoClient(process.env.MONGO_URI);
@@ -131,6 +133,13 @@ setInterval(() => {
         users.forEach((user) => {            
             if(Date.now() - user.lastStatus > 10000) {
                 db.collection("participants").deleteOne(user);
+                db.collection("messages").insertOne({
+                    from: user.name , 
+                    to: "Todos", 
+                    text: "sai da sala...", 
+                    type: "status", 
+                    time: dayjs().format("HH:mm:ss")
+                });
             }
         });
     });
