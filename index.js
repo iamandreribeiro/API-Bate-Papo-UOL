@@ -130,4 +130,14 @@ app.post("/status", async (req, res) => {
     });
 });
 
+setInterval(() => {
+    const participants = db.collection("participants").find({}).toArray().then((users) => {
+        users.forEach((user) => {            
+            if(Date.now() - user.lastStatus > 10000) {
+                db.collection("participants").deleteOne(user);
+            }
+        });
+    });
+}, 15000);
+
 app.listen(process.env.PORT, () => console.log(`Server running in port ${process.env.PORT}`));
