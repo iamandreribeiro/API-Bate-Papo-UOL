@@ -22,7 +22,6 @@ const db = client.db("UOL");
 
 app.post("/participants", (req, res) => {
     const { name } = req.body;
-
     const validation = Joi.string().required();
 
     let validateName = validation.validate(name);
@@ -61,8 +60,6 @@ app.post("/messages", (req, res) => {
     const {to, text, type} = req.body;
     const user = req.headers.user;
 
-    console.log(user);
-
     const validation = Joi.object({
         to: Joi.string().required(),
         text: Joi.string().required()
@@ -96,19 +93,17 @@ app.post("/messages", (req, res) => {
 app.get("/messages", async (req, res) => {
     const limit = req.query.limit ? parseInt(req.query.limit) : 0;
     const user = req.headers.user;
-    const messages = await db.collection("messages").find({}).limit(limit).toArray();
 
-    let filteredMessages = [];
+    let filteredMessages;
 
-    messages.forEach((msg) => {
-        if(user === msg.to || msg.to === "Todos") {
-            filteredMessages.push(msg);
-        }
-    });
-
-    console.log(messages);
-    console.log("Break Point")
-    console.log(filteredMessages);
+    await db.collection("messages").find({}).limit(limit).toArray().then((msgs) => {
+        filteredMessages = [];
+        msgs.forEach((msg) => {
+            if(user === msg.to || msg.to === "Todos") {
+                filteredMessages.push(msg);
+            }
+        });
+    });    
 
     res.send(filteredMessages);
 });
@@ -116,13 +111,14 @@ app.get("/messages", async (req, res) => {
 app.post("/status", async (req, res) => {
     const user = req.headers.user;
 
-    const participants = await db.collection("participants").find({name: user}).toArray().then((usr) => {
+    await db.collection("participants").find({name: user}).toArray().then((usr) => {
         if(usr.length > 0) {
             db.collection("participants").updateOne(
                 {lastStatus: usr[0].lastStatus},
                 {$set: {lastStatus: Date.now()}},
                 {upsert: true}
             );
+
             res.sendStatus(200);            
         } else {
             res.sendStatus(404);
@@ -131,7 +127,7 @@ app.post("/status", async (req, res) => {
 });
 
 setInterval(() => {
-    const participants = db.collection("participants").find({}).toArray().then((users) => {
+    db.collection("participants").find({}).toArray().then((users) => {
         users.forEach((user) => {            
             if(Date.now() - user.lastStatus > 10000) {
                 db.collection("participants").deleteOne(user);
